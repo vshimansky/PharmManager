@@ -12,7 +12,7 @@ namespace PharmManager
     {
         static void Main(string[] args)
         {
-            bool ShouldContinue = DbHelper.OpenConnection();
+            bool ShouldContinue = DbHelper.CheckConnection();
             if (!ShouldContinue)
                 ShowDbError(true);
             char input;
@@ -33,6 +33,7 @@ namespace PharmManager
                 else if (input == '4')
                     ShouldContinue = ManagBatches();
             }
+            DbHelper.CloseConnection();
         }
         static void ShowMainPromt()
         {
@@ -93,10 +94,17 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "товара");
             Console.Clear();
-            if (DbHelper.DeleteGood(id))
-                Console.WriteLine("Товар успешно удален");
+            if (DbHelper.CheckGood(id))
+            {
+                if (DbHelper.DeleteGood(id))
+                    Console.WriteLine("Товар успешно удален");
+                else
+                    ShowDbError();
+            }
             else
-                ShowDbError();
+            {
+                ShowError($"Товара с кодом {id} в базе нет");
+            }
             Console.WriteLine();
         }
         static void ListGood()
@@ -163,10 +171,15 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "аптеки");
             Console.Clear();
-            if (DbHelper.DeletePharmacy(id))
-                Console.WriteLine("Аптека успешно удален");
+            if (DbHelper.CheckPharmacyd(id))
+            {
+                if (DbHelper.DeletePharmacy(id))
+                    Console.WriteLine("Аптека успешно удален");
+                else
+                    ShowDbError();
+            }
             else
-                ShowDbError();
+                ShowError($"Аптеки с кодом {id} в базе нет");
             Console.WriteLine();
         }
         static void ListPharmacies()
@@ -182,7 +195,10 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "аптеки");
             Console.Clear();
-            Console.Write(DbHelper.ListPharmGoods(id));
+            if (DbHelper.CheckPharmacyd(id))
+                Console.Write(DbHelper.ListPharmGoods(id));
+            else
+                ShowError($"Аптеки с кодом {id} в базе нет");
             Console.WriteLine();
         }
         #endregion
@@ -226,10 +242,15 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "аптеки");
             Console.Clear();
-            if (DbHelper.AddStockd(name, id))
-                Console.WriteLine("Товар успешно добавлен");
+            if (DbHelper.CheckPharmacyd(id))
+            {
+                if (DbHelper.AddStockd(name, id))
+                    Console.WriteLine("Товар успешно добавлен");
+                else
+                    ShowDbError();
+            }
             else
-                ShowDbError();
+                ShowError($"Аптеки с кодом {id} в базе нет");
             Console.WriteLine();
         }
         static void DeleteStock()
@@ -239,10 +260,15 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "склада");
             Console.Clear();
-            if (DbHelper.DeleteStock(id))
-                Console.WriteLine("Склад успешно удален");
+            if (DbHelper.CheckStock(id))
+            {
+                if (DbHelper.DeleteStock(id))
+                    Console.WriteLine("Склад успешно удален");
+                else
+                    ShowDbError();
+            }
             else
-                ShowDbError();
+                ShowError($"Склада с кодом {id} в базе нет");
             Console.WriteLine();
         }
         static void ListStocks()
@@ -296,6 +322,18 @@ namespace PharmManager
             string count = Console.ReadLine();
             count = GetDigitalInput(count, "", "Кол-во должно выражаться целым числом: ");
             Console.Clear();
+            if (!DbHelper.CheckStock(stockId))
+            {
+                ShowError($"Склада с кодом {stockId} в базе нет");
+                Console.WriteLine();
+                return;
+            }
+            if (!DbHelper.CheckGood(goodId))
+            {
+                ShowError($"Товара с кодом {goodId} в базе нет");
+                Console.WriteLine();
+                return;
+            }
             if (DbHelper.AddBatch(stockId, goodId, count))
                 Console.WriteLine("Партия успешно добавлена");
             else
@@ -309,10 +347,15 @@ namespace PharmManager
             string id = Console.ReadLine();
             id = GetDigitalInput(id, "партии");
             Console.Clear();
-            if (DbHelper.DeleteBatch(id))
-                Console.WriteLine("Партия успешно удалена");
+            if (DbHelper.CheckBatch(id))
+            {
+                if (DbHelper.DeleteBatch(id))
+                    Console.WriteLine("Партия успешно удалена");
+                else
+                    ShowDbError();
+            }
             else
-                ShowDbError();
+                ShowError($"Партии товара с кодом {id} в базе нет");
             Console.WriteLine();
         }
         static void ListBatches()
@@ -333,6 +376,13 @@ namespace PharmManager
                 Console.WriteLine("Для завершения работы нажмите любую клавишу");
                 Console.Read();
             }
+        }
+        static void ShowError(string message)
+        {
+            if (String.IsNullOrWhiteSpace(DbHelper.DbError))
+                Console.WriteLine(message);
+            else
+                ShowDbError();
         }
         static string GetDigitalInput(string input, string type, string message = "")
         {
